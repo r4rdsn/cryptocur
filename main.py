@@ -52,8 +52,8 @@ class Notificator:
                     continue
 
                 prev_price = currencies_data.get(cur, {"Last": None})["Last"]
+                currencies_data[cur] = stat
                 if stat["Last"] != prev_price:
-                    currencies_data[cur] = stat
                     difference = (stat["Last"] - (prev_price if prev_price else 0)) / stat["Last"]
                     if difference and abs(difference) >= user["change"]:
                         relevant_currencies.append((cur, stat["Last"], difference))
