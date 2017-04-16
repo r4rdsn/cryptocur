@@ -48,6 +48,8 @@ class Notificator:
                             stat = currency_ticker["result"]
                         except ValueError:
                             continue
+                else:
+                    continue
 
                 prev_price = currencies_data.get(cur, {"Last": None})["Last"]
                 if stat["Last"] != prev_price:
@@ -58,7 +60,7 @@ class Notificator:
 
             if relevant_currencies:
                 message = "Изменились цены на следующие валюты:\n" + "\n".join(
-                    ["{} - {:.8f} {}{:.8f}%".format(name, price, "⬇" if difference < 0 else "⬆", abs(difference * 100))
+                    ["{} - {:.8f} {}{:.8f}%".format(name, price, "⬇" if diff < 0 else "⬆", abs(diff * 100))
                         for name, price, diff in relevant_currencies]
                 )
                 bot.send_message(int(user["id"]), message)
