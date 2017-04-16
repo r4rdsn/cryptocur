@@ -4,6 +4,7 @@ from api import Market
 
 import time
 import json
+import flask
 import logging
 import requests
 from threading import Timer
@@ -11,7 +12,7 @@ from decimal import Decimal
 
 import telebot
 from telebot import logger, console_output_handler
-from telebot.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
+from telebot.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton, Update
 
 
 logger.setLevel(logging.INFO)
@@ -219,20 +220,37 @@ def answer_remaining(message):
     bot.send_message(message.chat.id, "Я не понял вас.")
 
 
+app = flask.Flask(__name__)
+
+
+@app.route('/', methods=["GET", "HEAD"])
+def index():
+    return ""
+
+
+@app.route(config.WEBHOOK_URL_PATH, methods=["POST"])
+def webhook():
+    if flask.request.headers.get("content-type") == "application/json":
+        json_string = flask.request.get_data().decode('utf-8')
+        update = Update.de_json(json_string)
+        bot.process_new_updates([update])
+        return ""
+    else:
+        flask.abort(403)
+
+
 def main():
     notificator = Notificator()
+    bot.remove_webhook()
 
-    try:
-        bot.polling()
-        notificator.end_loop()
-    except (requests.exceptions.Timeout, requests.exceptions.ConnectionError):
-        logger.error("Lost connection, trying to reconnect.")
+    bot.set_webhook(url=config.WEBHOOK_URL_BASE + config.WEBHOOK_URL_PATH,
+                    certificate=open(config.WEBHOOK_SSL_CERT, 'r'))
+    app.run(host=config.WEBHOOK_LISTEN,
+            port=config.WEBHOOK_PORT,
+            ssl_context=(config.WEBHOOK_SSL_CERT, config.WEBHOOK_SSL_PRIV),
+            debug=True)
 
-        for s in range(9, -1, -1):
-            print('Reconnect in:', s, end='\r')
-            time.sleep(1)
-
-        main()
+    notificator.end_loop()
 
 
 if __name__ == "__main__":
