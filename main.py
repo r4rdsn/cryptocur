@@ -2,17 +2,14 @@ import config
 from db import database
 from api import Market
 
-import time
 import json
 import flask
 import logging
-import requests
 from threading import Timer
-from decimal import Decimal
 
 import telebot
 from telebot import logger, console_output_handler
-from telebot.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton, Update
+from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton, Update
 
 
 logger.setLevel(logging.INFO)
@@ -60,7 +57,7 @@ class Notificator:
 
             if relevant_currencies:
                 message = "Изменились цены на следующие валюты:\n" + "\n".join(
-                    ["{} - {:.8f} (на {}%)".format(name, price, difference * 100) for name, price, difference in relevant_currencies]
+                    ["{} - {:.8f} (на {:.8f}%)".format(name, price, difference * 100) for name, price, difference in relevant_currencies]
                 )
                 bot.send_message(int(user["id"]), message)
 
