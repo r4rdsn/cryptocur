@@ -4,6 +4,7 @@ from api import Market
 
 import json
 import flask
+import random
 import logging
 from threading import Timer
 
@@ -51,13 +52,14 @@ class Notificator:
                 prev_price = currencies_data.get(cur, {"Last": None})["Last"]
                 if stat["Last"] != prev_price:
                     currencies_data[cur] = stat
-                    difference = (stat["Last"] - (prev_price if prev_price is not None else 0)) / stat["Last"]
-                    if abs(difference) >= user["change"]:
+                    difference = (stat["Last"] - (prev_price if prev_price else 0)) / stat["Last"]
+                    if difference and abs(difference) >= user["change"]:
                         relevant_currencies.append((cur, stat["Last"], difference))
 
             if relevant_currencies:
                 message = "Изменились цены на следующие валюты:\n" + "\n".join(
-                    ["{} - {:.8f} (на {:.8f}%)".format(name, price, difference * 100) for name, price, difference in relevant_currencies]
+                    ["{} - {:.8f} {}{:.8f}%".format(name, price, "⬇" if difference < 0 else "⬆", abs(difference * 100))
+                        for name, price, diff in relevant_currencies]
                 )
                 bot.send_message(int(user["id"]), message)
 
@@ -84,7 +86,7 @@ bot = telebot.TeleBot(config.TOKEN)
 
 @bot.message_handler(commands=["help"])
 def help_message(message):
-    bot.send_message(message.chat.id, 'Привет! Я - криптовалютный бот.\nВведите команду "/list", чтобы увидеть доступные для подписки криптовалюты. Либо введите пару криптовалют вручную в формате "BTC-LTC".\nВведите команду "/subs" для просмотра списка ваших подписок.\nВведите команду "/change" для просмотра соотношения изменения, при котором я буду вас оповещать. При вводе этой команды с аргументом в форме десятичной дроби вы сможете изменить это соотношение.')
+    bot.send_message(message.chat.id, '💰 Привет! Я - криптовалютный бот.\n📇 Введите команду "/list", чтобы увидеть доступные для подписки криптовалюты.\n✔ Вы также можете ввести пару криптовалют вручную в формате "BTC-LTC" для подписки.\n❌ Повторная подписка отменяет её.\n📋 Введите команду "/subs" для просмотра списка ваших подписок.\n💯 Введите команду "/change" для просмотра соотношения изменения, при котором я буду вас оповещать. При вводе этой команды с аргументом в форме десятичной дроби вы сможете изменить это соотношение.')
 
 
 @bot.message_handler(commands=["start"])
@@ -148,14 +150,14 @@ def currency_call_subscription(call):
             bot.answer_callback_query(
                 callback_query_id=call.id,
                 show_alert=True,
-                text="Вы подписались на изменения цены криптовалюты {}".format(currency_key)
+                text="✔ Вы подписались на изменения цены криптовалюты {}".format(currency_key)
             )
         else:
             database.users.update_one({"_id": user_document["_id"]}, {"$pull": {"subscriptions": currency_key}})
             bot.answer_callback_query(
                 callback_query_id=call.id,
                 show_alert=True,
-                text="Вы отменили подписку на изменения цены криптовалюты {}".format(currency_key)
+                text="❌ Вы отменили подписку на изменения цены криптовалюты {}".format(currency_key)
             )
     else:
         answer_remaining(call.message)
@@ -171,13 +173,13 @@ def currency_message_subscription(message):
             database.users.update_one({"_id": user_document["_id"]}, {"$push": {"subscriptions": currency_key}})
             bot.send_message(
                 chat_id=message.chat.id,
-                text="Вы подписались на изменения цены криптовалюты {}".format(currency_key)
+                text="✔ Вы подписались на изменения цены криптовалюты {}".format(currency_key)
             )
         else:
             database.users.update_one({"_id": user_document["_id"]}, {"$pull": {"subscriptions": currency_key}})
             bot.send_message(
                 chat_id=message.chat.id,
-                text="Вы отменили подписку на изменения цены криптовалюты {}".format(currency_key)
+                text="❌ Вы отменили подписку на изменения цены криптовалюты {}".format(currency_key)
             )
     else:
         answer_remaining(message)
@@ -214,7 +216,7 @@ def show_user_subscriptions(message):
 
 @bot.message_handler(func=lambda _: True)
 def answer_remaining(message):
-    bot.send_message(message.chat.id, "Я не понял вас.")
+    bot.send_message(message.chat.id, 'Я вас не понял. Введите команду "/help" для просмотра доступных команд.')
 
 
 app = flask.Flask(__name__)
