@@ -164,11 +164,11 @@ def currency_call_subscription(call):
         answer_remaining(call.message)
 
 
-@bot.message_handler(regexp="[A-Z]{3,4}(?:_| |-)[A-Z]{3,5}")
+@bot.message_handler(regexp="[A-Za-z0-9]{1,6}(?:_| |-)[A-Za-z0-9]{1,6}")
 def currency_message_subscription(message):
     user_document = database.users.find_one({"id": message.from_user.id})
     user_subscriptions = user_document["subscriptions"]
-    currency_key = message.text.replace(" ", "-").replace("_", "-")
+    currency_key = message.text.replace(" ", "-").replace("_", "-").upper()
     if currency_key in market.currencies_list:
         if currency_key not in user_subscriptions:
             database.users.update_one({"_id": user_document["_id"]}, {"$push": {"subscriptions": currency_key}})
